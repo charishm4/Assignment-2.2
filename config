@@ -1,0 +1,54 @@
+Host bastionET2598
+ User ubuntu
+ HostName 188.95.226.181
+ UserKnownHostsFile=~/dev/null
+ IdentityFile ~/.ssh/id_rsa
+ StrictHostKeyChecking no
+ PasswordAuthentication no
+ ControlMaster auto
+ ControlPersist 5m
+
+Host HAproxy
+ User ubuntu
+ HostName 188.212.108.96
+ UserKnownHostsFile=~/dev/null
+ IdentityFile ~/.ssh/id_rsa
+ StrictHostKeyChecking no
+ PasswordAuthentication no
+
+Host myserver
+ User ubuntu
+ HostName 188.95.227.5
+ UserKnownHostsFile=~/dev/null
+ IdentityFile ~/.ssh/id_rsa
+ StrictHostKeyChecking no
+ PasswordAuthentication no
+
+
+Host devA
+ User ubuntu
+ HostName 10.0.1.29
+ IdentityFile ~/.ssh/id_rsa
+ UserKnownHostsFile=~/dev/null
+ StrictHostKeyChecking no
+ PasswordAuthentication no
+ ProxyCommand ssh -W %h:%p bastionET2598
+
+Host devB
+ User ubuntu
+ HostName 10.0.1.17
+ IdentityFile ~/.ssh/id_rsa
+ UserKnownHostsFile=~/dev/null
+ StrictHostKeyChecking no
+ PasswordAuthentication no
+ ProxyCommand ssh -W %h:%p bastionET2598
+
+Host devC
+ user ubuntu
+ HostName 10.0.1.15
+ IdentityFile ~/.ssh/id_rsa
+ UserKnownHostsFile=~/dev/null
+ StrictHostKeyChecking no
+ PasswordAuthentication no
+ ProxyCommand ssh -W %h:%p bastionET2598
+
