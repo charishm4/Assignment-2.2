@@ -1,0 +1,254 @@
+---
+- hosts: webservers
+  become: yes
+  gather_facts: yes
+  become_method: sudo
+
+  vars:
+    myapp: "application2"
+       
+  tasks:
+
+
+  - name: Wait for sudo
+    become: yes
+    shell:  while sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1; do sleep 5; done;
+
+  # - name: Remove apt lock file
+  #   file:
+  #     state: absent
+  #     path: "/var/cache/apt/archives/lock"
+  #   become: yes
+
+  # - name: Remove apt lock frontend file
+  #   file:
+  #     state: absent
+  #     path: "/var/lib/dpkg/lock-frontend"
+  #   become: yes
+
+  # - name: Remove apt lock file
+  #   file:
+  #     state: absent
+  #     path: "/var/lib/dpkg/*"
+  #   become: yes
+
+
+  - name: Update APT Cache
+    apt:
+      update_cache: yes
+      force_apt_get: yes
+    become: yes
+
+
+  - name: install flask and gunicorn dependencies
+    apt:
+        name: "{{ packages }}"
+        update_cache: yes
+    become: yes
+    vars:
+        packages:
+        - python3-pip
+       # - python3-dev
+        - build-essential
+       # - libssl-dev
+       # - libffi-dev
+        - python3-setuptools
+        - python3-venv 
+
+# create virtual env
+  - name: create Python virtual environment
+    raw: cd /srv; mkdir {{ myapp }}; cd {{ myapp }}; python3 -m venv {{ myapp }}env
+
+  - name: install pip
+    pip:
+        name: pip
+        state: latest
+        virtualenv: /srv/{{ myapp }}/{{ myapp}}env
+
+  - name: set up flask and gunicorn
+    pip:
+        name: 
+          - wheel
+          - gunicorn
+          - flask
+        virtualenv: /srv/{{ myapp }}/{{ myapp}}env
+
+
+# copy application2.py
+
+  - name: copy code - application2.py
+    template:
+        src: application2.py
+        dest: "/srv/{{ myapp }}"
+#wsgi
+
+  - name: create WSGI 
+    template:
+        src: wsgi.py
+        dest: "/srv/{{ myapp }}"
+
+
+# service for gunicorn/flask
+  - name: service for gunicorn and flask
+    template:
+        src: myappservice.service
+        dest: "/etc/systemd/system/"
+
+  - name: restart custom service
+    systemd:
+        state: restarted
+        daemon_reload: yes
+        name: myappservice.service
+
+#nginx
+  - name: install nginx 
+    package: name=nginx state=latest
+
+  - name: create directory
+    file: path="/var/www/{{ myapp }}" state=directory mode=0755
+
+  - name: create nginx config file
+    template:
+        src: nginx.conf
+        dest: "/etc/nginx/nginx.conf"
+    notify:
+      - restart nginx
+
+#nginx 
+  - name: Create nginx vhost config file
+    template:
+        src: myappconf.conf
+        dest: "/etc/nginx/sites-available/myappconf.conf"
+    notify:
+      - restart nginx
+
+  - name: Create symlinks
+    file: src=/etc/nginx/sites-available/myappconf.conf dest=/etc/nginx/sites-enabled/myappconf.conf state=link
+    notify:
+      - restart nginx
+
+# removing default file
+
+  - name: also remove default nginx vhost configuration
+    file: path=/etc/nginx/sites-enabled/default state=absent
+    notify:
+      - restart nginx
+
+#snmp
+  - name: install snmp
+    apt:
+      name: snmp
+      state: present
+
+  - name: install snmpd
+    apt:
+      name: snmpd
+      state: present
+
+  - name: copy snmpd.conf file
+    template: 
+      src="./snmpd.conf.j2"
+      dest="/etc/snmp/snmpd.conf"
+
+  - name: restart snmpd
+    service:
+       name: snmpd
+       state: restarted
+    become: yes
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
+
+
+
+# HAPROXY CONFIGURATION
+
+- hosts: HAproxy
+  gather_facts: yes
+  become: yes
+  become_method: sudo
+
+  tasks:
+
+  - name: update apt cache
+    become: yes
+    apt:
+      update_cache: yes
+
+  - name: haproxy installation
+    become: yes
+    apt:
+      name: haproxy
+      state: latest   
+
+  - name: upgrade the packages
+    become: yes
+    apt:
+      update_cache: yes
+    notify:
+        - run Haproxy   
+
+  - name: Gather facts from servers
+    setup:
+      filter: ansible_default_ipv4.address   
+
+
+  - name: removing haproxy.cfg
+    file:
+       path: "/etc/haproxy/haproxy.cfg"
+       state: absent
+    notify:
+     - restart haproxy
+
+
+  - name: Deploying haproxy.cfg 
+    template:
+      src: haproxy.cfg.j2
+      dest: "/etc/haproxy/haproxy.cfg"
+    notify:
+      - restart haproxy
+      - run Haproxy
+
+
+  - name: Installing nginx 
+    apt:
+        name: nginx
+        state: present
+        update_cache: true
+
+  - name:  set up nginx.conf file 
+    template:
+       src: nginxudp.conf
+       dest: "/etc/nginx/nginx.conf"
+
+  - name:  set up nginxport.conf file 
+    template:
+       src: nginxport.conf
+       dest: "/etc/nginx/sites-available/default"
+    
+  - name: Restart Nginx
+    service:
+         name: nginx
+         state: restarted
+    become: yes
+    
+  - name: install snmp
+    apt:
+        name: snmp
+        state: present
+
+
+
+  handlers:
+
+  - name: run Haproxy
+    service:
+        name: haproxy
+
+  - name: restart haproxy
+    service:
+      name: haproxy
+      state: restarted
