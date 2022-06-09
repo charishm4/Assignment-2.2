@@ -36,7 +36,7 @@
   - name: Update APT Cache
     apt:
       update_cache: yes
-      force_apt_get: yes
+     # force_apt_get: yes
     become: yes
 
 
@@ -50,8 +50,6 @@
         - python3-pip
        # - python3-dev
         - build-essential
-       # - libssl-dev
-       # - libffi-dev
         - python3-setuptools
         - python3-venv 
 
@@ -239,7 +237,6 @@
     apt:
         name: snmp
         state: present
-
 
 
   handlers:
