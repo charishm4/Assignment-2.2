@@ -9,7 +9,6 @@
        
   tasks:
 
-
   - name: Wait for sudo
     become: yes
     shell:  while sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1; do sleep 5; done;
@@ -20,23 +19,16 @@
   #     path: "/var/cache/apt/archives/lock"
   #   become: yes
 
-  # - name: Remove apt lock frontend file
-  #   file:
-  #     state: absent
-  #     path: "/var/lib/dpkg/lock-frontend"
-  #   become: yes
-
   # - name: Remove apt lock file
   #   file:
   #     state: absent
   #     path: "/var/lib/dpkg/*"
   #   become: yes
 
-
   - name: Update APT Cache
     apt:
       update_cache: yes
-     # force_apt_get: yes
+      force_apt_get: yes
     become: yes
 
 
