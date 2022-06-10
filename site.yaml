@@ -13,18 +13,6 @@
     become: yes
     shell:  while sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1; do sleep 5; done;
 
-  # - name: Remove apt lock file
-  #   file:
-  #     state: absent
-  #     path: "/var/cache/apt/archives/lock"
-  #   become: yes
-
-  # - name: Remove apt lock file
-  #   file:
-  #     state: absent
-  #     path: "/var/lib/dpkg/*"
-  #   become: yes
-
   - name: Update APT Cache
     apt:
       update_cache: yes
